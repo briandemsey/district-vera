@@ -107,9 +107,9 @@ def render_research_assistant(
     """
     role_label = "Administrator" if role == "administrator" else "Board Member"
     placeholder_text = (
-        "Ask about intervention programs, school-level gaps, LCAP alignment..."
+        "What is the reputation of the school district? Ask anything..."
         if role == "administrator"
-        else "Ask about gap status, LCAP spending alignment, governance questions..."
+        else "What is the reputation of the school district? Ask anything..."
     )
 
     st.markdown(
