@@ -28,7 +28,7 @@ load_dotenv()
 # ─────────────────────────────────────────────
 # Email notification
 # ─────────────────────────────────────────────
-def _send_registration_email(name: str, email: str, phone: str):
+def _send_registration_email(name: str, email: str, phone: str, jurisdiction: str = ""):
     smtp_host = os.getenv("SMTP_HOST", "smtpout.secureserver.net")
     smtp_port = int(os.getenv("SMTP_PORT", 465))
     smtp_user = os.getenv("SMTP_USER")
@@ -40,12 +40,13 @@ def _send_registration_email(name: str, email: str, phone: str):
     msg["From"] = smtp_user
     msg["To"] = notify_email
 
+    jurisdiction_line = f"Jurisdiction: {jurisdiction}\n" if jurisdiction else ""
     body = f"""New visitor registered for VERA District Intelligence:
 
-Name:   {name}
-Email:  {email}
-Phone:  {phone}
-
+Name:        {name}
+Email:       {email}
+Phone:       {phone}
+{jurisdiction_line}
 They have been granted access to the portal.
 """
     msg.attach(MIMEText(body, "plain"))
@@ -153,11 +154,10 @@ def render_registration_form():
             elif "@" not in email:
                 st.error("Please enter a valid email address.")
             else:
-                try:
-                    _send_registration_email(name.strip(), email.strip(), phone.strip())
-                except Exception:
-                    pass  # Don't block access if email fails
                 st.session_state.registered = True
+                st.session_state.visitor_name = name.strip()
+                st.session_state.visitor_email = email.strip()
+                st.session_state.visitor_phone = phone.strip()
                 st.rerun()
 
         st.markdown("---")
@@ -322,6 +322,15 @@ def render_district_selection():
 
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("Enter VERA", use_container_width=True, type="primary"):
+                try:
+                    _send_registration_email(
+                        st.session_state.get("visitor_name", ""),
+                        st.session_state.get("visitor_email", ""),
+                        st.session_state.get("visitor_phone", ""),
+                        f"California — {selected_name}",
+                    )
+                except Exception as e:
+                    st.warning(f"Registration email could not be sent ({e}).")
                 district_id = district_options[selected_name]
                 select_district(district_id, selected_name, selected_role)
                 st.rerun()
@@ -336,6 +345,15 @@ def render_district_selection():
             )
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("Enter VERA", use_container_width=True, type="primary"):
+                try:
+                    _send_registration_email(
+                        st.session_state.get("visitor_name", ""),
+                        st.session_state.get("visitor_email", ""),
+                        st.session_state.get("visitor_phone", ""),
+                        selected_jurisdiction,
+                    )
+                except Exception as e:
+                    st.warning(f"Registration email could not be sent ({e}).")
                 st.markdown(
                     f'<meta http-equiv="refresh" content="0; url={jurisdiction_url}">',
                     unsafe_allow_html=True,
