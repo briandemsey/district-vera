@@ -260,6 +260,7 @@ def render_district_selection():
         "Wyoming (WY)":             "https://vera-wy.onrender.com",
         "District of Columbia (DC)":"https://vera-dc.onrender.com",
         "VERA Federation":          "https://vera-federation.onrender.com",
+        "VERA Comply (SB 1288)":    "https://vera-comply.onrender.com",
     }
 
     jurisdiction_names = list(JURISDICTION_URLS.keys())
