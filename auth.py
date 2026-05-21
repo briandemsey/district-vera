@@ -11,10 +11,9 @@ Handles:
 """
 
 import os
-import smtplib
-import ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import urllib.request
+import urllib.error
+import json
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -26,35 +25,41 @@ load_dotenv()
 
 
 # ─────────────────────────────────────────────
-# Email notification
+# Email notification (SendGrid)
 # ─────────────────────────────────────────────
 def _send_registration_email(name: str, email: str, phone: str, jurisdiction: str = ""):
-    smtp_host = os.getenv("SMTP_HOST", "smtpout.secureserver.net")
-    smtp_port = int(os.getenv("SMTP_PORT", 465))
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_pass = os.getenv("SMTP_PASS")
-    notify_email = os.getenv("NOTIFY_EMAIL", smtp_user)
+    api_key = os.getenv("SENDGRID_API_KEY")
+    notify_email = os.getenv("NOTIFY_EMAIL", "brian@h-edu.solutions")
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"New VERA Access Request — {name}"
-    msg["From"] = smtp_user
-    msg["To"] = notify_email
-
-    jurisdiction_line = f"Jurisdiction: {jurisdiction}\n" if jurisdiction else ""
+    jurisdiction_line = f"\nJurisdiction: {jurisdiction}" if jurisdiction else ""
     body = f"""New visitor registered for VERA District Intelligence:
 
 Name:        {name}
 Email:       {email}
-Phone:       {phone}
-{jurisdiction_line}
+Phone:       {phone}{jurisdiction_line}
+
 They have been granted access to the portal.
 """
-    msg.attach(MIMEText(body, "plain"))
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(smtp_host, smtp_port, context=context) as server:
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(smtp_user, notify_email, msg.as_string())
+    payload = json.dumps({
+        "personalizations": [{"to": [{"email": notify_email}]}],
+        "from": {"email": "brian@h-edu.solutions", "name": "VERA District Intelligence"},
+        "subject": f"New VERA Access Request — {name}",
+        "content": [{"type": "text/plain", "value": body}],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.sendgrid.com/v3/mail/send",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req) as resp:
+        if resp.status not in (200, 202):
+            raise RuntimeError(f"SendGrid returned {resp.status}")
 
 
 # ─────────────────────────────────────────────
